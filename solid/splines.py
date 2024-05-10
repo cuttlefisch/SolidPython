@@ -602,9 +602,6 @@ def thomas(A: Sequence, B: Sequence, C: Sequence, D: Sequence) -> Sequence:
     # Work back to front, solving for x[i] using x[-1]
     for i in range(n - 1, -1, -1):
         X.append(d_prime[i] - c_prime[i] * X[-1])
-    # if DEBUG:
-    #     return [X[::-1], c_prime, d_prime]
-    # else:
     return X[::-1]
 
 
