@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 from math import copysign, pow, cos, sin, pi, atan2, acos
 from itertools import pairwise
-from pudb import set_trace
-
 from solid import (
     union,
     circle,
