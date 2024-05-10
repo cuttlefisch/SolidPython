@@ -442,9 +442,9 @@ def hobby_points(
     """
     # n is defined such that the points can be numbered P[0] ... P[n].
     # such that there are a total of n-1 points
-    if close_loop:
-        points.append(points[0])
-        points.insert(0, points[-2])
+    # if close_loop:
+    points.append(points[0])
+    points.insert(0, points[-2])
     n = len(points) - 1
     if n < 2:
         raise ValueError(
@@ -563,21 +563,38 @@ def hobby_points(
     # Finally gather up and return the spline points (knots & control points)
     # as a List of Point2s
     # res_controls = [(points[i], c0[i], c1[i]) for i in range(0, n - 1)]
-    res_controls = [(points[i], c0[i], c1[i]) for i in range(2, n - 1)]
-    # c0 at points[0] is None as there is no leading control
-    # c1 at points[-1] is None as there is no leading control
+    res_controls = [(points[i], c0[i], c1[i]) for i in range(2, n - 2)]
     # res_controls[0] = (points[1], c0[-1], c1[0])
     # res_controls[-1] = (c0[0], c1[-1])
-    res_controls.insert(
-        0,
-        (points[0], c0[-1], c1[1]),
-    )
+    if close_loop:
+        # Insert the curve from the last original point (points[0])
+        # to the first original point,
+        # res_controls.insert(0, (points[1], c0[1], c1[2]))
+        res_controls.insert(0, (points[0], c0[-1], c1[1]))
+        # res_controls[1] = (
+        #     points[1],
+        #     c0[-1],
+        #     c1[-1],
+        # )
+        # res_controls.insert(0, (c0[-1], c1[-1], points[0]))
+        res_controls.append(
+            (points[n - 2], c0[n - 2], c1[n - 2]),
+        )
+        # res_controls.append(
+        #     (points[0], c0[n - 1], c1[-1]),
+        # )
+        res_controls.append((points[0],))
+    else:
+        res_controls.insert(0, (points[0], c0[0], c1[1]))
+        res_controls.append((points[n - 2],))
+
+    set_trace()
+    # res_controls.insert(0, (points[1], c0[0], c1[-1]))
     # res_controls.append(
     #     (points[n - 2], c0[0], c1[-1]),
     # )
     # res_controls.append((points[n - 1],))
     # og_angle =
-    res_controls.append((points[n - 1],))
     if DEBUG:
         return [
             [Point3(*p.xyz) for p in flatten(res_controls)],
