@@ -423,7 +423,7 @@ def _bez33(u: float) -> float:
 # https://tug.org/TUGboat/tb34-2/tb107jackowski.pdf
 def hobby_points(
     points: List[Point3], omega: float = 0, close_loop: bool = False
-) -> List[Point2]:
+) -> List[Point3]:
     """Hobby's algorithm: given a set of points, fit a Bézier spline to them.
 
     The chosen splines tend to have pleasing, rounded shapes.
@@ -612,7 +612,7 @@ def vec3_perp_norm(v: Vector3, other: Vector3) -> Vector3:
     """Return the normalized cross product of vectors V and OTHER.
 
     Used to fetch a normalized vector perpendicular to
-    both V and OTHER.
+    both V and OTHER about which to rotate when forming smooth curves.
     """
     return v.cross(other).normalized()
 
