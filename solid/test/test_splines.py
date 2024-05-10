@@ -119,34 +119,25 @@ class TestSplines(DiffOutput):
     def test_hobby_points(self):
         expected = [
             Point3(0.00, 0.00, 0.00),
-            Point3(0.18, 0.46, 0.00),
-            Point3(0.53, 0.84, 0.00),
+            Point3(0.07, 0.50, 0.00),
+            Point3(0.52, 0.82, 0.00),
             Point3(1.00, 1.00, 0.00),
-            Point3(1.32, 1.11, 0.00),
-            Point3(1.67, 1.09, 0.00),
-            Point3(2.00, 1.00, 0.00),
-            Point3(2.94, 0.74, 0.00),
-            Point3(2.92, -0.59, 0.00),
+            Point3(1.33, 1.12, 0.00),
+            Point3(1.71, 1.19, 0.00),
             Point3(2.00, -1.00, 0.00),
         ]
 
-        actual = hobby_points(self.bezier_controls, self.hobby_omega)
+        actual = hobby_points(self.bezier_controls, self.hobby_omega, close_loop=False)
         self.assertPointsListsEqual(expected, actual)
 
     def test_hobby_points_raw(self):
         expected = [
             Point3(0.00, 0.00, 0.00),
-            Point3(0.18, 0.46, 0.00),
-            Point3(0.53, 0.84, 0.00),
-            Point3(1.00, 1.00, 0.00),
-            Point3(1.32, 1.11, 0.00),
-            Point3(1.67, 1.09, 0.00),
+            Point3(-0.10, 0.54, 0.00),
+            Point3(0.43, 0.91, 0.00),
             Point3(2.00, 1.00, 0.00),
-            Point3(2.94, 0.74, 0.00),
-            Point3(2.92, -0.59, 0.00),
-            Point3(2.00, -1.00, 0.00),
         ]
-        actual = hobby_points(self.bezier_controls, self.hobby_omega)
+        actual = hobby_points(self.points_raw, self.hobby_omega, close_loop=False)
         self.assertPointsListsEqual(expected, actual)
 
     def test_hobby_points_3d(self):
@@ -156,19 +147,17 @@ class TestSplines(DiffOutput):
             Point3(0.5, 0.5, 1),
             Point3(2, 1, 0),
         ]
-        expected = expected = [
+        expected = [
             Point3(-2.00, -1.00, 0.00),
-            Point3(-1.56, -1.06, 0.49),
-            Point3(-1.01, -0.90, 0.88),
+            Point3(-1.75, -1.03, 0.62),
+            Point3(-1.04, -0.90, 0.86),
             Point3(-0.50, -0.50, 1.00),
-            Point3(-0.13, -0.22, 1.08),
-            Point3(0.16, 0.17, 1.01),
-            Point3(0.50, 0.50, 1.00),
-            Point3(1.00, 0.98, 0.99),
-            Point3(1.60, 1.16, 0.55),
+            Point3(-0.12, -0.22, 1.10),
+            Point3(0.11, 0.24, 1.13),
             Point3(2.00, 1.00, 0.00),
         ]
-        actual = hobby_points(controls_3d, self.hobby_omega)
+
+        actual = hobby_points(controls_3d, self.hobby_omega, close_loop=False)
         self.assertPointsListsEqual(expected, actual)
 
     def test_catmull_rom_prism(self):
