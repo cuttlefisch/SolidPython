@@ -10,43 +10,38 @@ Tuple2 = Tuple[float, float]
 FacetIndices = Tuple[int, int, int]
 Point3Transform = Callable[[Point3, Optional[float], Optional[float]], Point3]
 
-
 # ==========================
 # = Extrusion along a path =
 # ==========================
-def extrude_along_path(
-    shape_pts: Points,
-    path_pts: Points,
-    scales: Sequence[Union[Vector2, float, Tuple2]] = None,
-    rotations: Sequence[float] = None,
-    transforms: Sequence[Callable] = None,
-    connect_ends=False,
-    cap_ends=True,
-    transform_args: List = None,
-    transform_kwargs: Dict = None,
-) -> OpenSCADObject:
-    """
+def extrude_along_path( shape_pts:Points, 
+                        path_pts:Points, 
+                        scales:Sequence[Union[Vector2, float, Tuple2]] = None,
+                        rotations: Sequence[float] = None,
+                        transforms: Sequence[Point3Transform] = None,
+                        connect_ends = False,
+                        cap_ends = True) -> OpenSCADObject:
+    '''
     Extrude the curve defined by shape_pts along path_pts.
     -- For predictable results, shape_pts must be planar, convex, and lie
     in the XY plane centered around the origin. *Some* nonconvexity (e.g, star shapes)
     and nonplanarity will generally work fine
-
+    
     -- len(scales) should equal len(path_pts).  No-op if not supplied
-          Each entry may be a single number for uniform scaling, or a pair of
+          Each entry may be a single number for uniform scaling, or a pair of 
           numbers (or Point2) for differential X/Y scaling
           If not supplied, no scaling will occur.
-
+          
     -- len(rotations) should equal 1 or len(path_pts). No-op if not supplied.
           Each point in shape_pts will be rotated by rotations[i] degrees at
           each point in path_pts. Or, if only one rotation is supplied, the shape
           will be rotated smoothly over rotations[0] degrees in the course of the extrusion
-
+    
     -- len(transforms) should be 1 or be equal to len(path_pts).  No-op if not supplied.
-          Each entry should be have the signature:
+          Each entry should be have the signature: 
              def transform_func(p:Point3, path_norm:float, loop_norm:float): Point3
           where path_norm is in [0,1] and expresses progress through the extrusion
           and loop_norm is in [0,1] and express progress through a single loop of the extrusion
-
+    
     -- if connect_ends is True, the first and last loops of the extrusion will
           be joined, which is useful for toroidal geometries. Overrides cap_ends
 
@@ -54,10 +49,11 @@ def extrude_along_path(
         will be connected to the centroid of that loop. For planar, convex shapes, this
         works nicely. If shape is less planar or convex, some self-intersection may happen.
         Not applied if connect_ends is True
-    """
+    '''
 
-    polyhedron_pts: Points = []
-    facet_indices: List[Tuple[int, int, int]] = []
+
+    polyhedron_pts:Points= []
+    facet_indices:List[Tuple[int, int, int]] = []
 
     # Make sure we've got Euclid Point3's for all elements
     shape_pts = euclidify(shape_pts, Point3)
@@ -70,7 +66,7 @@ def extrude_along_path(
     tangent_path_points: List[Point3] = []
 
     # If first & last points are the same, let's close the shape
-    first_last_equal = (path_pts[0] - path_pts[-1]).magnitude_squared() < EPSILON
+    first_last_equal = ((path_pts[0] - path_pts[-1]).magnitude_squared() < EPSILON)
     if first_last_equal:
         connect_ends = True
         path_pts = path_pts[:][:-1]
@@ -81,14 +77,11 @@ def extrude_along_path(
         first = Point3(*(path_pts[0] - (path_pts[1] - path_pts[0])))
         last = Point3(*(path_pts[-1] - (path_pts[-2] - path_pts[-1])))
         tangent_path_points = [first] + path_pts + [last]
-    tangents = [
-        tangent_path_points[i + 2] - tangent_path_points[i]
-        for i in range(len(path_pts))
-    ]
+    tangents = [tangent_path_points[i+2] - tangent_path_points[i] for i in range(len(path_pts))]
 
     for which_loop in range(len(path_pts)):
         # path_normal is 0 at the first path_pts and 1 at the last
-        path_normal = which_loop / (len(path_pts) - 1)
+        path_normal = which_loop/ (len(path_pts) - 1)
 
         path_pt = path_pts[which_loop]
         tangent = tangents[which_loop]
@@ -96,53 +89,21 @@ def extrude_along_path(
 
         rotate_degrees = None
         if rotations:
-            rotate_degrees = (
-                rotations[which_loop]
-                if len(rotations) > 1
-                else rotations[0] * path_normal
-            )
+            rotate_degrees = rotations[which_loop] if len(rotations) > 1 else rotations[0] * path_normal
 
         transform_func = None
         if transforms:
-            transform_func = (
-                transforms[which_loop] if len(transforms) > 1 else transforms[0]
-            )
-        # Default to no *args or **kwargs
-        this_transform_func_args = None
-        if transform_args:
-            this_transform_func_args = (
-                transform_args[which_loop]
-                if len(transform_args) > 1
-                else transform_args[0]
-            )
-        this_transform_func_kwargs = None
-        if transform_kwargs:
-            this_transform_func_kwargs = (
-                transform_kwargs[which_loop]
-                if len(transform_kwargs) > 1
-                else transform_kwargs[0]
-            )
+            transform_func = transforms[which_loop] if len(transforms) > 1 else transforms[0]
 
         this_loop = shape_pts[:]
-        this_loop = _scale_loop(
-            this_loop,
-            scale,
-        )
+        this_loop = _scale_loop(this_loop, scale)
         this_loop = _rotate_loop(this_loop, rotate_degrees)
-        this_loop = _transform_loop(
-            this_loop,
-            transform_func,
-            path_normal,
-            this_transform_func_args,
-            this_transform_func_kwargs,
-        )
+        this_loop = _transform_loop(this_loop, transform_func, path_normal)
 
-        this_loop = transform_to_point(
-            this_loop, dest_point=path_pt, dest_normal=tangent, src_up=src_up
-        )
+        this_loop = transform_to_point(this_loop, dest_point=path_pt, dest_normal=tangent, src_up=src_up)
         loop_start_index = which_loop * shape_pt_count
 
-        if which_loop < len(path_pts) - 1:
+        if (which_loop < len(path_pts) - 1):
             loop_facets = _loop_facet_indices(loop_start_index, shape_pt_count)
             facet_indices += loop_facets
 
@@ -156,61 +117,46 @@ def extrude_along_path(
 
     elif cap_ends:
         # OpenSCAD's polyhedron will automatically triangulate faces as needed.
-        # So just include all points at each end of the tube
-        last_loop_start_index = len(polyhedron_pts) - shape_pt_count
+        # So just include all points at each end of the tube 
+        last_loop_start_index = len(polyhedron_pts) - shape_pt_count 
         start_loop_indices = list(reversed(range(shape_pt_count)))
-        end_loop_indices = list(
-            range(last_loop_start_index, last_loop_start_index + shape_pt_count)
-        )
+        end_loop_indices = list(range(last_loop_start_index, last_loop_start_index + shape_pt_count))   
         facet_indices.append(start_loop_indices)
         facet_indices.append(end_loop_indices)
 
-    return polyhedron(points=euc_to_arr(polyhedron_pts), faces=facet_indices)  # type: ignore
+    return polyhedron(points=euc_to_arr(polyhedron_pts), faces=facet_indices) # type: ignore
 
-
-def _loop_facet_indices(
-    loop_start_index: int, loop_pt_count: int, next_loop_start_index=None
-) -> List[FacetIndices]:
+def _loop_facet_indices(loop_start_index:int, loop_pt_count:int, next_loop_start_index=None) -> List[FacetIndices]:
     facet_indices: List[FacetIndices] = []
     # nlsi == next_loop_start_index
     if next_loop_start_index == None:
         next_loop_start_index = loop_start_index + loop_pt_count
-    loop_indices = list(range(loop_start_index, loop_pt_count + loop_start_index)) + [
-        loop_start_index
-    ]
-    next_loop_indices = list(
-        range(next_loop_start_index, loop_pt_count + next_loop_start_index)
-    ) + [next_loop_start_index]
+    loop_indices      = list(range(loop_start_index,      loop_pt_count + loop_start_index)) + [loop_start_index]
+    next_loop_indices = list(range(next_loop_start_index, loop_pt_count + next_loop_start_index )) + [next_loop_start_index]
 
     for i, (a, b) in enumerate(zip(loop_indices[:-1], loop_indices[1:])):
-        c, d = next_loop_indices[i : i + 2]
+        c, d = next_loop_indices[i: i+2]
         # OpenSCAD's polyhedron will accept quads and do its own triangulation with them,
-        # so we could just append (a,b,d,c).
+        # so we could just append (a,b,d,c). 
         # However, this lets OpenSCAD (Or CGAL?) do its own triangulation, leading
         # to some strange outcomes. Prefer to do our own triangulation.
         #   c--d
         #   |\ |
         #   | \|
-        #   a--b
+        #   a--b               
         # facet_indices.append((a,b,d,c))
-        facet_indices.append((a, b, c))
-        facet_indices.append((b, d, c))
+        facet_indices.append((a,b,c))
+        facet_indices.append((b,d,c))
     return facet_indices
 
-
-def _rotate_loop(
-    points: Sequence[Point3], rotation_degrees: float = None
-) -> List[Point3]:
+def _rotate_loop(points:Sequence[Point3], rotation_degrees:float=None) -> List[Point3]:
     if rotation_degrees is None:
         return points
-    up = Vector3(0, 0, 1)
+    up = Vector3(0,0,1)
     rads = radians(rotation_degrees)
     return [p.rotate_around(up, rads) for p in points]
 
-
-def _scale_loop(
-    points: Sequence[Point3], scale: Union[float, Point2, Tuple2] = None
-) -> List[Point3]:
+def _scale_loop(points:Sequence[Point3], scale:Union[float, Point2, Tuple2]=None) -> List[Point3]:
     if scale is None:
         return points
 
@@ -218,14 +164,7 @@ def _scale_loop(
         scale = [scale] * 2
     return [Point3(point.x * scale[0], point.y * scale[1], point.z) for point in points]
 
-
-def _transform_loop(
-    points: Sequence[Point3],
-    transform_func: Callable = None,
-    path_normal: float = None,
-    *args,
-    **kwargs,
-) -> List[Point3]:
+def _transform_loop(points:Sequence[Point3], transform_func:Point3Transform = None, path_normal:float = None) -> List[Point3]:
     # transform_func is a function that takes a point and optionally two floats,
     # a `path_normal`, in [0,1] that indicates where this loop is in a path extrusion,
     # and `loop_normal` in [0,1] that indicates where this point is in a list of points
@@ -235,9 +174,8 @@ def _transform_loop(
     result = []
     for i, p in enumerate(points):
         # i goes from 0 to 1 across points
-        loop_normal = i / (len(points) - 1)
-        # print(f"args:\t{args}")
-        # print(f"kwargs:\t{kwargs}")
-        new_p = transform_func(p, path_normal, loop_normal, *args, **kwargs)
+        loop_normal = i/(len(points) -1)
+        new_p = transform_func(p, path_normal, loop_normal)
         result.append(new_p)
     return result
+
