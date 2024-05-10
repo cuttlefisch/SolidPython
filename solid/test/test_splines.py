@@ -124,6 +124,9 @@ class TestSplines(DiffOutput):
             Point3(1.00, 1.00, 0.00),
             Point3(1.33, 1.12, 0.00),
             Point3(1.71, 1.19, 0.00),
+            Point3(2.00, 1.00, 0.00),
+            Point3(2.63, 0.60, 0.00),
+            Point3(2.35, -0.28, 0.00),
             Point3(2.00, -1.00, 0.00),
         ]
 
@@ -133,11 +136,19 @@ class TestSplines(DiffOutput):
     def test_hobby_points_raw(self):
         expected = [
             Point3(0.00, 0.00, 0.00),
-            Point3(-0.10, 0.54, 0.00),
-            Point3(0.43, 0.91, 0.00),
+            Point3(0.07, 0.50, 0.00),
+            Point3(0.52, 0.82, 0.00),
+            Point3(1.00, 1.00, 0.00),
+            Point3(1.33, 1.12, 0.00),
+            Point3(1.71, 1.19, 0.00),
             Point3(2.00, 1.00, 0.00),
+            Point3(2.63, 0.60, 0.00),
+            Point3(2.35, -0.28, 0.00),
+            Point3(2.00, -1.00, 0.00),
         ]
-        actual = hobby_points(self.points_raw, self.hobby_omega, close_loop=False)
+        actual = hobby_points(
+            self.bezier_controls_raw, self.hobby_omega, close_loop=False
+        )
         self.assertPointsListsEqual(expected, actual)
 
     def test_hobby_points_3d(self):
@@ -154,6 +165,9 @@ class TestSplines(DiffOutput):
             Point3(-0.50, -0.50, 1.00),
             Point3(-0.12, -0.22, 1.10),
             Point3(0.11, 0.24, 1.13),
+            Point3(0.50, 0.50, 1.00),
+            Point3(1.01, 0.84, 0.83),
+            Point3(1.55, 0.88, 0.44),
             Point3(2.00, 1.00, 0.00),
         ]
 

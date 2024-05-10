@@ -17,10 +17,10 @@ SEGMENTS = 12
 def assembly():
     knot_points = [
         Point3(0, 0, -1),
-        Point3(1, 3, -2),
-        Point3(2, 1, 1),
+        Point3(1, -2, -2),
+        Point3(2, 0, 1),
         Point3(3, -1, 2),
-        Point3(0, -4, 0),
+        Point3(3, 1, -2),
     ]
     knot_points = [kp * SCALE for kp in knot_points]
     path = splines.hobby_points(knot_points, OMEGA, close_loop=True)
