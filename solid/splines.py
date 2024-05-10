@@ -442,9 +442,14 @@ def hobby_points(
     """
     # n is defined such that the points can be numbered P[0] ... P[n].
     # such that there are a total of n-1 points
-    # if close_loop:
+    # Ensure points are 3d
+    if not isinstance(points[0], Point3):
+        points = [Point3(*point) for point in points]
+
+    # Track edge control points to smooth things out
     points.append(points[0])
     points.insert(0, points[-2])
+
     n = len(points) - 1
     if n < 2:
         raise ValueError(
@@ -456,13 +461,6 @@ def hobby_points(
     chords = [
         Vector3(*(next_point - point).xyz) for point, next_point in pairwise(points)
     ]
-    # if close_loop, prepend chord from last point to first
-    # and append chord from first to last
-    # or maybe the other way around?
-    # chords.insert(0, Vector3(*(points[-1] - points[0]).xyz))
-    # chords.append(Vector3(*(points[0] - points[-1]).xyz))
-    # d = [point.distance(next_point) for point, next_point in pairwise(points)]
-
     d = [chord.magnitude() for chord in chords]
     if min(d) <= 0:
         # cannot support successive points being the same
@@ -470,14 +468,7 @@ def hobby_points(
 
     # gamma[i] is the signed turning angle at P[i], i.e. the angle between
     # the chords from P[i-1] to P[i] and from P[i] to P[i+1].
-    # gamma[0] is undefined; gamma[n] is artificially defined to be zero
-    gamma = [
-        # vec3_angle_between(chord, next_chord)
-        # for chord, next_chord in pairwise(chords)
-        chord.angle(next_chord)
-        for chord, next_chord in pairwise(chords)
-    ]
-    # gamma.insert(0, copysign(1, gamma[0]))
+    gamma = [chord.angle(next_chord) for chord, next_chord in pairwise(chords)]
     gamma.insert(0, gamma[-1])
     gamma.append(gamma[1])
 
@@ -511,10 +502,7 @@ def hobby_points(
     C.append(0)
     D.append(0)
 
-    if DEBUG:
-        alpha, c_prime, d_prime = thomas(A, B, C, D)
-    else:
-        alpha = thomas(A, B, C, D)
+    alpha = thomas(A, B, C, D)
 
     # Use alpha (the chord angle) and gamma (the turning angle of the chord
     # polyline) to solve for beta at each point (beta is like alpha, but for
@@ -544,75 +532,24 @@ def hobby_points(
         c0.append(c0_new_point)
         c1.append(c1_new_point)
 
-    # c0_first_point = (c0[0] / a) * b
-    # c0_first_point = points[0] + (
-    #     chords[0].rotate_around(normals[0], alpha[n - 1]).normalize()
-    #     * ((rho(alpha[0], beta[0]) * d[0]) / 3.0)
-    # )
-    # # CORRECT
-    # c0_last_point = points[-2] + (
-    #     chords[-1].rotate_around(normals[n], alpha[n - 1]).normalize()
-    #     # * a
-    #     * ((rho(alpha[-1], beta[-1]) * d[-1]) / 3.0)
-    # )
-    # c1_last_point = points[0] - (
-    #     chords[-1].rotate_around(normals[n - 1], pi / 3 - alpha[0]).normalize()
-    #     * ((rho(beta[0], alpha[0]) * d[0]) / 3.0)
-    #     # * ((rho(beta[-1], beta[-1]) * d[0]) / 3.0)
-    # )
     # Finally gather up and return the spline points (knots & control points)
     # as a List of Point2s
-    # res_controls = [(points[i], c0[i], c1[i]) for i in range(0, n - 1)]
     res_controls = [(points[i], c0[i], c1[i]) for i in range(2, n - 2)]
-    # res_controls[0] = (points[1], c0[-1], c1[0])
-    # res_controls[-1] = (c0[0], c1[-1])
     if close_loop:
         # Insert the curve from the last original point (points[0])
         # to the first original point,
-        # res_controls.insert(0, (points[1], c0[1], c1[2]))
-        res_controls.insert(0, (points[0], c0[-1], c1[1]))
-        # res_controls[1] = (
-        #     points[1],
-        #     c0[-1],
-        #     c1[-1],
-        # )
-        # res_controls.insert(0, (c0[-1], c1[-1], points[0]))
+        res_controls.insert(0, (points[1], c0[1], c1[1]))
         res_controls.append(
             (points[n - 2], c0[n - 2], c1[n - 2]),
         )
-        # res_controls.append(
-        #     (points[0], c0[n - 1], c1[-1]),
-        # )
-        res_controls.append((points[0],))
+        res_controls.append(
+            (points[n - 1], c0[n - 1], c1[0]),
+        )
+        res_controls.append((points[1],))
     else:
-        res_controls.insert(0, (points[0], c0[0], c1[1]))
-        res_controls.append((points[n - 2],))
-
-    set_trace()
-    # res_controls.insert(0, (points[1], c0[0], c1[-1]))
-    # res_controls.append(
-    #     (points[n - 2], c0[0], c1[-1]),
-    # )
-    # res_controls.append((points[n - 1],))
-    # og_angle =
-    if DEBUG:
-        return [
-            [Point3(*p.xyz) for p in flatten(res_controls)],
-            c0,
-            c1,
-            chords,
-            d,
-            gamma,
-            alpha,
-            c_prime,
-            d_prime,
-            beta,
-            A,
-            B,
-            C,
-            D,
-            normals,
-        ]
+        # Set the first control point group's c1 to the
+        res_controls.insert(0, (points[1], c0[1], c1[1]))
+        res_controls.append((points[n - 1],))
     return [Point3(*p.xyz) for p in flatten(res_controls)]
 
 
@@ -665,10 +602,10 @@ def thomas(A: Sequence, B: Sequence, C: Sequence, D: Sequence) -> Sequence:
     # Work back to front, solving for x[i] using x[-1]
     for i in range(n - 1, -1, -1):
         X.append(d_prime[i] - c_prime[i] * X[-1])
-    if DEBUG:
-        return [X[::-1], c_prime, d_prime]
-    else:
-        return X[::-1]
+    # if DEBUG:
+    #     return [X[::-1], c_prime, d_prime]
+    # else:
+    return X[::-1]
 
 
 # ===========
@@ -681,33 +618,6 @@ def vec3_perp_norm(v: Vector3, other: Vector3) -> Vector3:
     both V and OTHER.
     """
     return v.cross(other).normalized()
-
-
-def vec2_angle_between(v: Vector3, other: Vector3) -> float:
-    """Signed angle between the xy components of V and OTHER."""
-    return atan2(other.y * v.x - other.x * v.y, v.x * other.x + v.y * other.y)
-
-
-def vec3_angle_between(v: Vector3, other: Vector3) -> float:
-    """Signed angle between the xy components of V and OTHER."""
-    dot_product = v.dot(other)
-    cross_product = v.cross(other)
-    return atan2(cross_product.magnitude(), dot_product)
-
-
-def vec3_rotate(v: Vector3, theta: float) -> Vector3:
-    """Rotate a vector V about its origin by angle THETA."""
-    rx = Matrix4.new_rotatex(theta)
-    ry = Matrix4.new_rotatey(theta)
-    rz = Matrix4.new_rotatez(theta)
-    return v * rz * ry * rx
-
-
-def vec2_rotate(v: Vector3, theta: float) -> Vector3:
-    """Rotate the x and y components of V by THETA while preserving V.z"""
-    ca = cos(theta)
-    sa = sin(theta)
-    return Vector3(*[v.x * ca - v.y * sa, v.x * sa + v.y * ca, v.z])
 
 
 def flatten(matr: Sequence[Sequence], keep_none_values: bool = True) -> List:
