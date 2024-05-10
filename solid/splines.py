@@ -532,17 +532,16 @@ def hobby_points(
 
     # Finally gather up and return the spline points (knots & control points)
     # as a List of Point2s
-    res_controls = [(points[i], c0[i], c1[i]) for i in range(2, n - 1)]
+    res_controls = [(points[i], c0[i], c1[i]) for i in range(1, n - 1)]
     if close_loop:
         # Insert the curve from the last input point
         # to the first input point,
-        res_controls.insert(0, (points[1], c0[1], c1[1]))
         res_controls.append(
             (points[n - 1], c0[n - 1], c1[0]),
         )
         res_controls.append((points[1],))
     else:
-        res_controls.insert(0, (points[1], c0[1], c1[1]))
+        # Append the last input point only
         res_controls.append((points[n - 1],))
     return [Point3(*p.xyz) for p in flatten(res_controls)]
 
