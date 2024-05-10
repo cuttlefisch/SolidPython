@@ -534,7 +534,7 @@ def hobby_points(
     # as a List of Point2s
     res_controls = [(points[i], c0[i], c1[i]) for i in range(1, n - 1)]
     if close_loop:
-        # Insert the curve from the last input point
+        # Append the curve from the last input point
         # to the first input point,
         res_controls.append(
             (points[n - 1], c0[n - 1], c1[0]),
